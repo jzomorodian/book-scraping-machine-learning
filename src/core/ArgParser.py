@@ -21,16 +21,10 @@ class ArgPars:
             help='Category to scrape books from'
         )
         self.parser.add_argument(
-            '--csv',
-            '-v',
-            action="store_true",
-            help="Export to csv file"
-        )
-        self.parser.add_argument(
-            '--excel',
+            '--export',
             '-e',
             action="store_true",
-            help="Export to excel file"
+            help="Export to excel and csv file"
         )
         self.parser.add_argument(
             '--dlimages',

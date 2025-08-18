@@ -1,11 +1,9 @@
 import requests
 from bs4 import BeautifulSoup as BfS
 import time
-import csv
 import os
 import json
 import pandas as pd
-# from tqdm import tqdm, trange
 
 
 class BookScraper:
@@ -53,16 +51,22 @@ class BookScraper:
         # Extract data from specific table rows
         upc = rows[0].find('td').text
         availability = rows[5].find('td').text.strip()
-        description = soup.find('meta', attrs={'name': 'description'})[
-            'content'].strip()
+        description = soup.find(
+            'meta',
+            attrs={'name': 'description'}
+        )['content'].strip()
         price_excl_tax = rows[2].find('td').text.strip()
         price_incl_tax = rows[3].find('td').text.strip()
         tax = rows[4].find('td').text.strip()
         number_of_reviews = rows[6].find('td').text.strip()
+
         image_url = soup.find('img')['src']
+        category = soup.find('ul', class_='breadcrumb'). \
+            find_all('li')[-2].text.strip()
 
         return {
             'title': title,
+            'category': category,
             'price': price,
             'rating': rating,
             'availability': availability,
@@ -80,7 +84,7 @@ class BookScraper:
         """
         Fetches all categories from the main page of the book store.
         Returns:
-            list: A list of dictionaries containing category names and
+            list: A dictionary containing categories names and
             their corresponding links.
         """
         try:
@@ -102,11 +106,11 @@ class BookScraper:
             link = self.base_url + category["href"]
             # find the category name:
             category_name = category.text.strip()
-            # print the category name:
-            print(f"Category: {category_name}, Link: {link}")
             # append the link to the list:
             dict_of_categories[category_name] = link
 
+        # print the category name:
+        print(f'{len(dict_of_categories)} Category fetched')
         # Store the categories in the instance variable
         self.all_categories = dict_of_categories
 
@@ -160,8 +164,6 @@ class BookScraper:
                     # Be a good web citizen and pause between requests
                     time.sleep(0.1)
 
-                # --- Pagination ---
-                # Check if there is a 'next' page link
                 # --- Check for a 'next' page link to continue pagination ---
                 next_button = soup.find('li', class_='next')
                 if next_button:
@@ -192,39 +194,15 @@ class BookScraper:
 
         if books:
             output_filename = f'exports/{category_name}.json'
-            print(f"Saving data to {output_filename}...")
 
             with open(output_filename, 'w', encoding='utf-8') as f:
                 json.dump(books, f, ensure_ascii=False, indent=4)
 
             print("Data saved successfully.")
 
-    def save_books_to_csv(self, books, category_name):
+    def export_books(self, books, category_name):
         """
-        Saves the list of books to a CSV file.
-
-        Args:
-            books (list): List of book dictionaries.
-            filename (str): The name of the file to save the books.
-        """
-        # --- Save the collected data to a CSV file ---
-        if books:
-            output_filename = f'exports/{category_name}.csv'
-            print(f"Saving data to {output_filename}...")
-
-            # Use the keys from the first dictionary as headers
-            headers = books[0].keys()
-
-            with open(output_filename, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=headers)
-                writer.writeheader()
-                writer.writerows(books)
-
-            print("Data saved successfully.")
-
-    def save_books_to_excel(self, books, category_name):
-        """
-        Saves the list of books to an Excel file.
+        Exports the list of books.
 
         Args:
             books (list): List of book dictionaries.
@@ -232,11 +210,15 @@ class BookScraper:
         """
 
         if books:
-            output_filename = f'exports/{category_name}.xlsx'
-            print(f"Saving data to {output_filename}...")
+            excel_filename = f'exports/{category_name}.xlsx'
+            csv_filename = f'exports/{category_name}.csv'
+            print(f"Saving data to {excel_filename}...")
 
             df = pd.DataFrame(books)
-            df.to_excel(output_filename, index=False)
+            df.to_excel(excel_filename, index=False)
+            #  Drop description column
+            df.drop(columns=['description'], inplace=True)
+            df.to_csv(csv_filename)
 
             print("Data saved successfully.")
 
